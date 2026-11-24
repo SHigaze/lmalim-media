@@ -1,0 +1,29 @@
+name: decode-images
+on:
+  push:
+    branches: [main]
+    paths: ['**.b64']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode base64 uploads into binary images
+        run: |
+          set -e
+          found=0
+          while IFS= read -r f; do
+            found=1
+            base64 -d "$f" > "${f%.b64}"
+            git rm -q "$f"
+            git add "${f%.b64}"
+          done < <(find . -name '*.b64' -not -path './.git/*')
+          if [ "$found" = 1 ]; then
+            git config user.name "lmalim-media-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git commit -m "Decode uploaded images"
+            git push
+          fi
